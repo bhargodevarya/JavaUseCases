@@ -2,6 +2,7 @@ package com.bhargo;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,8 +22,8 @@ public class Main {
         //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
 
        // multiThreadingPrintNumbers();
-       // customCyclicBarrierDemo();
-        producerConsumerWaitNotify();
+        customCyclicBarrierDemo();
+       // producerConsumerWaitNotify();
 
     }
 
@@ -125,36 +126,36 @@ public class Main {
     }
 
     static class customCyclicBarrier  {
-        private int count;
+        private AtomicInteger count;
         private Runnable postAction;
         private Lock lock = new ReentrantLock();
         private Condition condition = lock.newCondition();
 
         public customCyclicBarrier(int count, Runnable postAction) {
-            this.count = count;
+            this.count = new AtomicInteger(count);
             this.postAction = postAction;
         }
 
         public customCyclicBarrier(int count) {
-            this.count = count;
+            this.count = new AtomicInteger(count);
         }
 
         public void await() throws Exception {
             lock.lock();
-            --count;
+            count.decrementAndGet();
             System.out.println("The count is " + count);
-            if(count < 0) {
+            if(count.get() < 0) {
                 throw  new Exception("barries broken");
             }
                 try {
-                    if(count == 0) {
+                    if(count.get() == 0) {
                         if (postAction != null) {
                             postAction.run();
                         }
                         condition.signalAll();
                         return;
                     }
-                    if(count > 0) {
+                    if(count.get() > 0) {
                         condition.await();
                     }
                 } finally {
