@@ -1,5 +1,9 @@
 package com.bhargo;
 
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,21 +14,11 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Created by barya on 10/5/2016.
  */
-public class Main {
+@SpringBootApplication
+public class Main implements CommandLineRunner{
 
     public static void main(String[] args) {
-        //multipleProdCons();
-        ExecutorService executorService = Executors.newScheduledThreadPool(2);
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
-        //System.out.println(executor.getMaximumPoolSize() + " " + executor.getCorePoolSize());
-        //executor.submit(() -> {});
-
-        //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
-
-       // multiThreadingPrintNumbers();
-        customCyclicBarrierDemo();
-       // producerConsumerWaitNotify();
-
+        SpringApplication.run(Main.class, args);
     }
 
     static void producerConsumerWaitNotify () {
@@ -98,6 +92,20 @@ public class Main {
         new Thread(new customRunnable(barrier, false)).start();
         new Thread(new customRunnable(barrier, false)).start();
         new Thread(new customRunnable(barrier, false)).start();
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        //multipleProdCons();
+        ExecutorService executorService = Executors.newScheduledThreadPool(2);
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        //System.out.println(executor.getMaximumPoolSize() + " " + executor.getCorePoolSize());
+        //executor.submit(() -> {});
+
+        //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
+
+        // multiThreadingPrintNumbers();
+        customCyclicBarrierDemo();
     }
 
     static class customRunnable implements Runnable {
