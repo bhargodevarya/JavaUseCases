@@ -21,13 +21,27 @@ public class Main implements CommandLineRunner{
         SpringApplication.run(Main.class, args);
     }
 
-    static void producerConsumerWaitNotify () {
+    @Override
+    public void run(String... args) throws Exception {
+        //multipleProdCons();
+        ExecutorService executorService = Executors.newScheduledThreadPool(2);
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        //System.out.println(executor.getMaximumPoolSize() + " " + executor.getCorePoolSize());
+        //executor.submit(() -> {});
+
+        //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
+
+        // multiThreadingPrintNumbers();
+        customCyclicBarrierDemo();
+    }
+
+    static void producerConsumerWaitNotify() {
         Resource resource = new Resource("");
         new userProducer(resource).start();
         new userConsumer(resource).start();
     }
 
-    static class userProducer  extends Thread {
+    static class userProducer extends Thread {
 
         private Resource resource;
 
@@ -39,7 +53,7 @@ public class Main implements CommandLineRunner{
         public void run() {
             synchronized (resource) {
                 while (true) {
-                    if(resource.isProduced()) {
+                    if (resource.isProduced()) {
                         try {
                             resource.wait();
                             Thread.sleep(2000);
@@ -83,7 +97,7 @@ public class Main implements CommandLineRunner{
         }
     }
 
-    static void customCyclicBarrierDemo () {
+    static void customCyclicBarrierDemo() {
         customCyclicBarrier barrier = new customCyclicBarrier(5, () -> {
             System.out.println("All threads have arrived at the barrier");
         });
@@ -92,20 +106,6 @@ public class Main implements CommandLineRunner{
         new Thread(new customRunnable(barrier, false)).start();
         new Thread(new customRunnable(barrier, false)).start();
         new Thread(new customRunnable(barrier, false)).start();
-    }
-
-    @Override
-    public void run(String... args) throws Exception {
-        //multipleProdCons();
-        ExecutorService executorService = Executors.newScheduledThreadPool(2);
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
-        //System.out.println(executor.getMaximumPoolSize() + " " + executor.getCorePoolSize());
-        //executor.submit(() -> {});
-
-        //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
-
-        // multiThreadingPrintNumbers();
-        customCyclicBarrierDemo();
     }
 
     static class customRunnable implements Runnable {
@@ -133,7 +133,7 @@ public class Main implements CommandLineRunner{
         }
     }
 
-    static class customCyclicBarrier  {
+    static class customCyclicBarrier {
         private AtomicInteger count;
         private Runnable postAction;
         private Lock lock = new ReentrantLock();
@@ -152,36 +152,35 @@ public class Main implements CommandLineRunner{
             lock.lock();
             count.decrementAndGet();
             System.out.println("The count is " + count);
-            if(count.get() < 0) {
-                throw  new Exception("barries broken");
+            if (count.get() < 0) {
+                throw new Exception("barries broken");
             }
-                try {
-                    if(count.get() == 0) {
-                        if (postAction != null) {
-                            postAction.run();
-                        }
-                        condition.signalAll();
-                        return;
+            try {
+                if (count.get() == 0) {
+                    if (postAction != null) {
+                        postAction.run();
                     }
-                    if(count.get() > 0) {
-                        condition.await();
-                    }
-                } finally {
-                    lock.unlock();
+                    condition.signalAll();
+                    return;
                 }
+                if (count.get() > 0) {
+                    condition.await();
+                }
+            } finally {
+                lock.unlock();
+            }
 
         }
 
-        private void signal () {
+        private void signal() {
             condition.signalAll();
         }
     }
 
 
-
     @FunctionalInterface
     private interface func<T> {
-        T produce ();
+        T produce();
     }
 
     private static void multiThreadingPrintNumbers() {
@@ -233,6 +232,7 @@ public class Main implements CommandLineRunner{
         })).start();
 
     }
+
     private static class userRunnable<T> implements Runnable {
 
         private BlockingQueue<T> receivingQueue;
@@ -252,11 +252,11 @@ public class Main implements CommandLineRunner{
             while (true) {
                 try {
                     Thread.sleep(2000);
-                    if(init) {
+                    if (init) {
                         sendingQueue.put(func.produce());
                         init = false;
                     }
-                    if(receivingQueue.size() > 0) {
+                    if (receivingQueue.size() > 0) {
                         System.out.println(receivingQueue.take());
                         sendingQueue.put(func.produce());
                     }
@@ -267,18 +267,18 @@ public class Main implements CommandLineRunner{
         }
     }
 
-    private static void findHighestTwoNumbers (Integer[] arr) {
+    private static void findHighestTwoNumbers(Integer[] arr) {
         int highest, secondHighest;
-        if(arr[0] > arr[1]) {
+        if (arr[0] > arr[1]) {
             highest = arr[0];
             secondHighest = arr[1];
         } else {
             secondHighest = arr[0];
             highest = arr[1];
         }
-        for (int i =2; i<arr.length -1; i++ ) {
-            if(arr[i] > secondHighest) {
-                if(arr[i] > highest) {
+        for (int i = 2; i < arr.length - 1; i++) {
+            if (arr[i] > secondHighest) {
+                if (arr[i] > highest) {
                     secondHighest = highest;
                     highest = arr[i];
                 } else if (arr[i] < highest) {
@@ -289,17 +289,17 @@ public class Main implements CommandLineRunner{
         System.out.printf("The largest num is %d and the 2nd largest is %d", highest, secondHighest);
     }
 
-    private static void sortMapByValues (Map<Integer, String> map) {
+    private static void sortMapByValues(Map<Integer, String> map) {
         Set<String> set = new TreeSet<>(map.values());
     }
 
-    private static void multipleProdCons () {
+    private static void multipleProdCons() {
         BlockingDeque<Resource> blockingDeque = new LinkedBlockingDeque<>();
-        for(int i =1; i<=10;i++) {
+        for (int i = 1; i <= 10; i++) {
             new Thread(new Producer(blockingDeque)).start();
         }
 
-        for(int i =1; i<=10;i++) {
+        for (int i = 1; i <= 10; i++) {
             new Thread(new Consumer(blockingDeque)).start();
         }
     }
@@ -348,16 +348,17 @@ public class Main implements CommandLineRunner{
         @Override
         public void run() {
             Resource resource;
-                while (true) {
-                    try {
-                        Thread.sleep(2000);
-                        resource = new Resource(Thread.currentThread().getName() + " " + new Date().toString());
-                        blockingDeque.add(resource);
-                        System.out.println(resource);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+            while (true) {
+                try {
+
+                    resource = new Resource(Thread.currentThread().getName() + " " + new Date().toString());
+                    blockingDeque.add(resource);
+                    System.out.println(resource);
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+            }
         }
     }
 
@@ -374,12 +375,26 @@ public class Main implements CommandLineRunner{
             while (true) {
                 try {
                     Thread.sleep(2000);
-                    if(blockingDeque.size() > 0)
+                    //if(blockingDeque.size() > 0)
                     System.out.println(Thread.currentThread().getName() + " consumed " + blockingDeque.take());
                 } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    e.printStackTrace();
+                }
             }
+        }
+    }
+
+    static void StairCase(int n) {
+
+        for (int i = 0; i < n; i++) {
+            int j = 1;
+            for (; j < n - i; j++) {
+                System.out.print(" ");
+            }
+            for (int k = 0; k <= n - j; k++) {
+                System.out.print("#");
+            }
+            System.out.println();
         }
     }
 }
