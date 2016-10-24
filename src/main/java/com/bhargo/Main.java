@@ -32,7 +32,8 @@ public class Main implements CommandLineRunner{
         //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
 
         // multiThreadingPrintNumbers();
-        customCyclicBarrierDemo();
+        // customCyclicBarrierDemo();
+        printNumbersWaitNotify();
     }
 
     static void producerConsumerWaitNotify() {
@@ -106,6 +107,70 @@ public class Main implements CommandLineRunner{
         new Thread(new customRunnable(barrier, false)).start();
         new Thread(new customRunnable(barrier, false)).start();
         new Thread(new customRunnable(barrier, false)).start();
+    }
+
+    static void printNumbersWaitNotify() {
+        Integer in1 = new Integer(1);
+        Integer in2 = new Integer(2);
+        Integer in3 = new Integer(3);
+
+        new Thread(() -> {
+            while (true) {
+                synchronized (in3) {
+                    try {
+                        in3.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("C");
+                    synchronized (in1) {
+                        in1.notify();
+                    }
+                }
+            }
+        }).start();
+        new Thread(() -> {
+            while (true) {
+                synchronized (in2) {
+                    try {
+                        in2.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("B");
+                    synchronized (in3) {
+                        in3.notify();
+                    }
+                }
+            }
+        }).start();
+        new Thread(() -> {
+            boolean init = true;
+            while (true) {
+                synchronized (in1) {
+                    if(init) {
+                        System.out.println("A");
+                        init = false;
+                    } else {
+                        try {
+                            in1.wait();
+                            System.out.println("A");
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    synchronized (in2) {
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        in2.notify();
+                    }
+                }
+            }
+        }).start();
+
     }
 
     static class customRunnable implements Runnable {
