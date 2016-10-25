@@ -34,13 +34,49 @@ public class Main implements CommandLineRunner{
 
         //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
 
-        // multiThreadingPrintNumbers();
+         //multiThreadingPrintNumbers(3);
         // customCyclicBarrierDemo();
-        printNumbersWaitNotify();
+        //printNumbersWaitNotify();
          //multiThreadingPrintNumbers(3);
         //customCyclicBarrierDemo();
+         //printNumbersWaitNotify(3);
+         //multiThreadingPrintNumbers(3);
+        // customCyclicBarrierDemo();
 
-        deadLockWaitNotify();
+        //deadLockWaitNotify();
+        deadLock();
+    }
+
+
+    static void deadLock() {
+        Integer in = new Integer(2);
+        Lock lock1 = new ReentrantLock();
+        Lock lock2 = new ReentrantLock();
+        new Thread(() -> {
+            synchronized (lock1) {
+                synchronized (in) {
+                    try {
+                        in.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    synchronized (lock2) {
+
+                    }
+                }
+            }
+        }).start();
+        new Thread(() -> {
+            synchronized (lock2) {
+                synchronized (in) {
+                    in.notify();
+                }
+                synchronized (lock1) {
+
+                }
+            }
+
+        }).start();
     }
 
     static void deadLockWaitNotify() {
@@ -155,68 +191,60 @@ public class Main implements CommandLineRunner{
         new Thread(new customRunnable(barrier, false)).start();
     }
 
-    static void printNumbersWaitNotify() {
-        Integer in1 = new Integer(1);
-        Integer in2 = new Integer(2);
-        Integer in3 = new Integer(3);
+    static void printNumbersWaitNotify(int n) {
+        Object[] in = new Object[n];
+        for(int i =0;i<n;i++) {
+            in[i] =  new Integer(1);
+        }
 
-        new Thread(() -> {
-            while (true) {
-                synchronized (in3) {
-                    try {
-                        in3.wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("C");
+        class userRunnable implements Runnable {
+
+            Object in1;
+            Object in2;
+            boolean init;
+            func<String> func;
+
+            public userRunnable(Object in1, Object in2, boolean init, func<String> func) {
+                this.in1 = in1;
+                this.in2 = in2;
+                this.init = init;
+                this.func = func;
+            }
+
+            @Override
+            public void run() {
+                while (true) {
                     synchronized (in1) {
-                        in1.notify();
-                    }
-                }
-            }
-        }).start();
-        new Thread(() -> {
-            while (true) {
-                synchronized (in2) {
-                    try {
-                        in2.wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("B");
-                    synchronized (in3) {
-                        in3.notify();
-                    }
-                }
-            }
-        }).start();
-        new Thread(() -> {
-            boolean init = true;
-            while (true) {
-                synchronized (in1) {
-                    if(init) {
-                        System.out.println("A");
-                        init = false;
-                    } else {
-                        try {
-                            in1.wait();
-                            System.out.println("A");
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        if(init) {
+                            System.out.println(func.produce());
+                            init = false;
+                        } else {
+                            try {
+                                in1.wait();
+                                System.out.println(func.produce());
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        synchronized (in2) {
+                            in2.notify();
                         }
                     }
-                    synchronized (in2) {
-                        try {
-                            Thread.sleep(2000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        in2.notify();
-                    }
                 }
             }
-        }).start();
+        }
 
+
+        for(int j =n-1;j>=0;j--) {
+            if(j == 0) {
+                new Thread(new userRunnable(in[j],in[j+1], true, () ->{return "a";}), "Thread1")
+                        .start();
+            } else if(j == n -1) {
+                new Thread(new userRunnable(in[j], in[0], false, () ->{return "c";}), "Thread3").start();
+            } else {
+                new Thread(new userRunnable(in[j],in[j+1], false, () ->{return "b";}), "Thread2").start();
+            }
+        }
     }
 
     static class customRunnable implements Runnable {
