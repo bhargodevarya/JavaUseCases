@@ -4,6 +4,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,6 +37,49 @@ public class Main implements CommandLineRunner{
         // multiThreadingPrintNumbers();
         // customCyclicBarrierDemo();
         printNumbersWaitNotify();
+         //multiThreadingPrintNumbers(3);
+        //customCyclicBarrierDemo();
+
+        deadLockWaitNotify();
+    }
+
+    static void deadLockWaitNotify() {
+        Integer in = new Integer(1);
+        Integer in2 = new Integer(2);
+        Integer in3 = new Integer(3);
+        new Thread(() -> {
+            synchronized (in) {
+                try {
+                    System.out.println(Thread.currentThread().getName() + " waiting ");
+                    synchronized (in2) {
+                        in.wait();
+                        System.out.println(Thread.currentThread().getName() + " got " + in2);
+                        synchronized (in3) {
+                            System.out.println(Thread.currentThread().getName() + " got " + in3);
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
+        new Thread(() -> {
+            synchronized (in) {
+                try {
+                    in.notify();
+                    System.out.println(Thread.currentThread().getName() + " notified");
+                    synchronized (in3) {
+                        System.out.println(Thread.currentThread().getName() + " got " + in3);
+                        synchronized (in2) {
+                            System.out.println(Thread.currentThread().getName() + " got " + in2);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     static void producerConsumerWaitNotify() {
@@ -248,53 +294,27 @@ public class Main implements CommandLineRunner{
         T produce();
     }
 
-    private static void multiThreadingPrintNumbers() {
+    private static void multiThreadingPrintNumbers(int n)  {
 
-        BlockingQueue<Integer> sendingQueue1 = new ArrayBlockingQueue<>(1);
-        BlockingQueue<Integer> sendingQueue2 = new ArrayBlockingQueue<>(1);
-        BlockingQueue<Integer> sendingQueue3 = new ArrayBlockingQueue<>(1);
-
-
-        int[] intArr1 = new int[]{1};
-        int[] intArr2 = new int[]{2};
-        int[] intArr3 = new int[]{3};
-        new Thread(new userRunnable<Integer>(sendingQueue3, sendingQueue1, true, () -> {
-            if (intArr1[0] == 1) {
-                intArr1[0] = 4;
-                return new Integer(1);
-            } else if (intArr1[0] == 4) {
-                intArr1[0] = 7;
-                return new Integer(4);
+        List<BlockingQueue<String>> queueList= new ArrayList<>(n);
+        int[] in = new int[n];
+        int[] indexToPick = new int[1];
+        for(int j =0;j<n; j++) {
+            queueList.add(new ArrayBlockingQueue<String>(1));
+            in[0] = j;
+        }
+        for (int i =0; i<queueList.size();i++) {
+            indexToPick[0] = i;
+            if(i == 0) {
+                new Thread(new userRunnable<String>(queueList.get(queueList.size() -1), queueList.get(i), true, () ->{
+                    return Integer.valueOf(++in[indexToPick[0]]);
+                })).start();
+            } else if(i == queueList.size()-1) {
+                new Thread(new userRunnable<String>(queueList.get(i-1), queueList.get(i), false, () ->{return Integer.valueOf(++in[indexToPick[0]]);})).start();
             } else {
-                intArr1[0] = 1;
-                return new Integer(7);
+                new Thread(new userRunnable<String>(queueList.get(i-1), queueList.get(i), false, () ->{return Integer.valueOf(++in[indexToPick[0]]);})).start();
             }
-        })).start();
-        new Thread(new userRunnable<Integer>(sendingQueue1, sendingQueue2, false, () -> {
-            if (intArr2[0] == 2) {
-                intArr2[0] = 5;
-                return new Integer(2);
-            } else if (intArr2[0] == 5) {
-                intArr2[0] = 8;
-                return new Integer(5);
-            } else {
-                intArr2[0] = 2;
-                return new Integer(8);
-            }
-        })).start();
-        new Thread(new userRunnable<Integer>(sendingQueue2, sendingQueue3, false, () -> {
-            if (intArr3[0] == 3) {
-                intArr3[0] = 6;
-                return new Integer(3);
-            } else if (intArr3[0] == 6) {
-                intArr3[0] = 9;
-                return new Integer(6);
-            } else {
-                intArr3[0] = 3;
-                return new Integer(9);
-            }
-
-        })).start();
+        }
 
     }
 
@@ -316,7 +336,7 @@ public class Main implements CommandLineRunner{
         public void run() {
             while (true) {
                 try {
-                    Thread.sleep(2000);
+                    //Thread.sleep(2000);
                     if (init) {
                         sendingQueue.put(func.produce());
                         init = false;
@@ -461,5 +481,11 @@ public class Main implements CommandLineRunner{
             }
             System.out.println();
         }
+    }
+}
+
+class test {
+    static {
+        System.out.println(">>>>>>>>>>>>>>>>>>>>");
     }
 }
