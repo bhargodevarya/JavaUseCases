@@ -4,6 +4,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,9 +34,85 @@ public class Main implements CommandLineRunner{
 
         //findHighestTwoNumbers(new Integer[]{54,856,86,12,4,66,856,35});
 
-        // multiThreadingPrintNumbers();
+         //multiThreadingPrintNumbers(3);
         // customCyclicBarrierDemo();
-        printNumbersWaitNotify();
+         printNumbersWaitNotify(3);
+         //multiThreadingPrintNumbers(3);
+        // customCyclicBarrierDemo();
+
+        //deadLockWaitNotify();
+        //deadLock();
+    }
+
+
+    static void deadLock() {
+        Integer in = new Integer(2);
+        Lock lock1 = new ReentrantLock();
+        Lock lock2 = new ReentrantLock();
+        new Thread(() -> {
+            synchronized (lock1) {
+                synchronized (in) {
+                    try {
+                        in.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    synchronized (lock2) {
+
+                    }
+                }
+            }
+        }).start();
+        new Thread(() -> {
+            synchronized (lock2) {
+                synchronized (in) {
+                    in.notify();
+                }
+                synchronized (lock1) {
+
+                }
+            }
+
+        }).start();
+    }
+
+    static void deadLockWaitNotify() {
+        Integer in = new Integer(1);
+        Integer in2 = new Integer(2);
+        Integer in3 = new Integer(3);
+        new Thread(() -> {
+            synchronized (in) {
+                try {
+                    System.out.println(Thread.currentThread().getName() + " waiting ");
+                    synchronized (in2) {
+                        in.wait();
+                        System.out.println(Thread.currentThread().getName() + " got " + in2);
+                        synchronized (in3) {
+                            System.out.println(Thread.currentThread().getName() + " got " + in3);
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
+        new Thread(() -> {
+            synchronized (in) {
+                try {
+                    in.notify();
+                    System.out.println(Thread.currentThread().getName() + " notified");
+                    synchronized (in3) {
+                        System.out.println(Thread.currentThread().getName() + " got " + in3);
+                        synchronized (in2) {
+                            System.out.println(Thread.currentThread().getName() + " got " + in2);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     static void producerConsumerWaitNotify() {
@@ -109,68 +188,60 @@ public class Main implements CommandLineRunner{
         new Thread(new customRunnable(barrier, false)).start();
     }
 
-    static void printNumbersWaitNotify() {
-        Integer in1 = new Integer(1);
-        Integer in2 = new Integer(2);
-        Integer in3 = new Integer(3);
+    static void printNumbersWaitNotify(int n) {
+        Object[] in = new Object[n];
+        for(int i =0;i<n;i++) {
+            in[i] =  new Integer(1);
+        }
 
-        new Thread(() -> {
-            while (true) {
-                synchronized (in3) {
-                    try {
-                        in3.wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("C");
+        class userRunnable implements Runnable {
+
+            Object in1;
+            Object in2;
+            boolean init;
+            func<String> func;
+
+            public userRunnable(Object in1, Object in2, boolean init, func<String> func) {
+                this.in1 = in1;
+                this.in2 = in2;
+                this.init = init;
+                this.func = func;
+            }
+
+            @Override
+            public void run() {
+                while (true) {
                     synchronized (in1) {
-                        in1.notify();
-                    }
-                }
-            }
-        }).start();
-        new Thread(() -> {
-            while (true) {
-                synchronized (in2) {
-                    try {
-                        in2.wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("B");
-                    synchronized (in3) {
-                        in3.notify();
-                    }
-                }
-            }
-        }).start();
-        new Thread(() -> {
-            boolean init = true;
-            while (true) {
-                synchronized (in1) {
-                    if(init) {
-                        System.out.println("A");
-                        init = false;
-                    } else {
-                        try {
-                            in1.wait();
-                            System.out.println("A");
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        if(init) {
+                            System.out.println(func.produce());
+                            init = false;
+                        } else {
+                            try {
+                                in1.wait();
+                                System.out.println(func.produce());
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        synchronized (in2) {
+                            in2.notify();
                         }
                     }
-                    synchronized (in2) {
-                        try {
-                            Thread.sleep(2000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        in2.notify();
-                    }
                 }
             }
-        }).start();
+        }
 
+
+        for(int j =n-1;j>=0;j--) {
+            if(j == 0) {
+                new Thread(new userRunnable(in[j],in[j+1], true, () ->{return "a";}), "Thread1")
+                        .start();
+            } else if(j == n -1) {
+                new Thread(new userRunnable(in[j], in[0], false, () ->{return "c";}), "Thread3").start();
+            } else {
+                new Thread(new userRunnable(in[j],in[j+1], false, () ->{return "b";}), "Thread2").start();
+            }
+        }
     }
 
     static class customRunnable implements Runnable {
@@ -248,53 +319,27 @@ public class Main implements CommandLineRunner{
         T produce();
     }
 
-    private static void multiThreadingPrintNumbers() {
+    private static void multiThreadingPrintNumbers(int n)  {
 
-        BlockingQueue<Integer> sendingQueue1 = new ArrayBlockingQueue<>(1);
-        BlockingQueue<Integer> sendingQueue2 = new ArrayBlockingQueue<>(1);
-        BlockingQueue<Integer> sendingQueue3 = new ArrayBlockingQueue<>(1);
-
-
-        int[] intArr1 = new int[]{1};
-        int[] intArr2 = new int[]{2};
-        int[] intArr3 = new int[]{3};
-        new Thread(new userRunnable<Integer>(sendingQueue3, sendingQueue1, true, () -> {
-            if (intArr1[0] == 1) {
-                intArr1[0] = 4;
-                return new Integer(1);
-            } else if (intArr1[0] == 4) {
-                intArr1[0] = 7;
-                return new Integer(4);
+        List<BlockingQueue<String>> queueList= new ArrayList<>(n);
+        int[] in = new int[n];
+        int[] indexToPick = new int[1];
+        for(int j =0;j<n; j++) {
+            queueList.add(new ArrayBlockingQueue<String>(1));
+            in[0] = j;
+        }
+        for (int i =0; i<queueList.size();i++) {
+            indexToPick[0] = i;
+            if(i == 0) {
+                new Thread(new userRunnable<String>(queueList.get(queueList.size() -1), queueList.get(i), true, () ->{
+                    return Integer.valueOf(++in[indexToPick[0]]);
+                })).start();
+            } else if(i == queueList.size()-1) {
+                new Thread(new userRunnable<String>(queueList.get(i-1), queueList.get(i), false, () ->{return Integer.valueOf(++in[indexToPick[0]]);})).start();
             } else {
-                intArr1[0] = 1;
-                return new Integer(7);
+                new Thread(new userRunnable<String>(queueList.get(i-1), queueList.get(i), false, () ->{return Integer.valueOf(++in[indexToPick[0]]);})).start();
             }
-        })).start();
-        new Thread(new userRunnable<Integer>(sendingQueue1, sendingQueue2, false, () -> {
-            if (intArr2[0] == 2) {
-                intArr2[0] = 5;
-                return new Integer(2);
-            } else if (intArr2[0] == 5) {
-                intArr2[0] = 8;
-                return new Integer(5);
-            } else {
-                intArr2[0] = 2;
-                return new Integer(8);
-            }
-        })).start();
-        new Thread(new userRunnable<Integer>(sendingQueue2, sendingQueue3, false, () -> {
-            if (intArr3[0] == 3) {
-                intArr3[0] = 6;
-                return new Integer(3);
-            } else if (intArr3[0] == 6) {
-                intArr3[0] = 9;
-                return new Integer(6);
-            } else {
-                intArr3[0] = 3;
-                return new Integer(9);
-            }
-
-        })).start();
+        }
 
     }
 
@@ -461,5 +506,11 @@ public class Main implements CommandLineRunner{
             }
             System.out.println();
         }
+    }
+}
+
+class test {
+    static {
+        System.out.println(">>>>>>>>>>>>>>>>>>>>");
     }
 }
